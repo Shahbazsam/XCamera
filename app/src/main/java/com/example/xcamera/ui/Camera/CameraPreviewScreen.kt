@@ -1,0 +1,171 @@
+@file:OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+
+package com.example.xcamera.ui.Camera
+
+import android.content.Context
+import androidx.camera.compose.CameraXViewfinder
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material3.BottomSheetScaffoldState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.launch
+
+@Composable
+fun CameraPreviewScreen(
+    viewModel: CameraViewModel,
+    innerPadding: PaddingValues,
+    scaffoldState: BottomSheetScaffoldState
+) {
+
+    val cameraPermissionState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            android.Manifest.permission.CAMERA,
+            android.Manifest.permission.RECORD_AUDIO
+        )
+    )
+    if (cameraPermissionState.allPermissionsGranted) {
+        CameraPreviewContent(
+            viewModel,
+            innerPadding,
+            scaffoldState
+        )
+    } else {
+        Column (
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxHeight()
+                .background(color = Color.DarkGray),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ){
+            val text = if (cameraPermissionState.shouldShowRationale) {
+                "Whoops! Looks like we need your camera to work our magic!" +
+                        "Don't worry, we just wanna see your pretty face (and maybe some cats).  " +
+                        "Grant us permission and let's get this party started!"
+            } else {
+                "Hi there! We need your camera to work our magic! ✨\n" +
+                        "Grant us permission and let's get this party started! \uD83C\uDF89"
+            }
+            Text(
+                text,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(22.dp))
+            Button(
+                onClick = {
+                    cameraPermissionState.launchMultiplePermissionRequest()
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = "Grant Permissions",
+                    textAlign = TextAlign.Center
+                )
+            }
+
+        }
+    }
+}
+
+@Composable
+fun CameraPreviewContent(
+    viewModel: CameraViewModel,
+    innerPadding: PaddingValues,
+    scaffoldState: BottomSheetScaffoldState,
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
+    context: Context = LocalContext.current
+    ) {
+
+    val surfaceRequest = viewModel.surfaceRequest.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(lifecycleOwner) {
+        viewModel.bindToLifeCycle(
+            lifecycleOwner, context
+        )
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+    ) {
+
+        surfaceRequest.value?.let { request ->
+            CameraXViewfinder(
+                surfaceRequest = request
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        scaffoldState.bottomSheetState.expand()
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Photo,
+                    contentDescription = "Open Gallery "
+                )
+            }
+            IconButton(
+                onClick = {
+                    viewModel.takePhoto(context)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Camera,
+                    contentDescription = "Take Photo"
+                )
+            }
+            IconButton(
+                onClick = {
+
+                    viewModel.switchCamera(lifecycleOwner, context)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Cameraswitch,
+                    contentDescription = "Switch Camera"
+                )
+            }
+        }
+    }
+}
