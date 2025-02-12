@@ -1,4 +1,4 @@
-package com.example.xcamera.ui.Camera
+package com.example.xcamera.ui.camera
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -21,16 +21,37 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.xcamera.data.local.Photos
+import com.example.xcamera.data.repository.PhotoRepository
+import com.example.xcamera.ui.state.PhotoState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import javax.inject.Inject
 
-class CameraViewModel : ViewModel() {
+@HiltViewModel
+class CameraViewModel @Inject constructor(
+    private val photoRepository: PhotoRepository
+) : ViewModel() {
 
-    private val _bitmaps = MutableStateFlow<List<Bitmap>>(emptyList())
-    val bitmap = _bitmaps.asStateFlow()
+    val photoUiState : StateFlow<List<PhotoState>> = photoRepository.getAllPhotos()
+        .map { photos ->
+            photos.map {
+                PhotoState(
+                    it.id , it.photoPath
+                )
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Lazily , emptyList())
 
     private var surfaceOrientedMeteringPointFactory : SurfaceOrientedMeteringPointFactory ? = null
 
@@ -95,6 +116,7 @@ class CameraViewModel : ViewModel() {
     }
 
     fun takePhoto(context: Context) {
+
         imageCaptureUseCase.takePicture(
             ContextCompat.getMainExecutor(context),
             object : OnImageCapturedCallback() {
@@ -113,7 +135,14 @@ class CameraViewModel : ViewModel() {
                         matrix,
                         true
                     )
-                    _bitmaps.value += image.toBitmap()
+                    viewModelScope.launch {
+                        val path = savePhotoPrivately(context , rotatedBitmap)
+                        photoRepository.insertPhoto(
+                            Photos(
+                                photoPath = path
+                            )
+                        )
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -122,6 +151,36 @@ class CameraViewModel : ViewModel() {
                 }
             }
         )
+    }
+
+    private fun savePhotoPrivately(context: Context , bitmap : Bitmap) : String {
+        val directory = File(context.filesDir , "PrivateGallery")
+        if (!directory.exists()) directory.mkdirs()
+
+        val file  = File(directory , "photo_${System.currentTimeMillis()}.jpg")
+        val outputStream = FileOutputStream(file)
+        bitmap.compress(Bitmap.CompressFormat.JPEG , 100 , outputStream)
+        outputStream.flush()
+        outputStream.close()
+        return file.absolutePath
+    }
+
+    fun deletePhoto(photo : Photos) {
+        viewModelScope.launch {
+            val file = File(photo.photoPath)
+            if (file.exists()) {
+                file.delete()
+            }
+            photoRepository.deletePhoto( photo )
+        }
+    }
+
+    fun getPhotoById(id: Int) {
+        viewModelScope.launch {
+            photoRepository.getPhotoById(
+                id
+            )
+        }
     }
 
 }

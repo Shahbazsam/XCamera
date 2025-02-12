@@ -13,11 +13,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.xcamera.ui.Camera.BottomSheetPhotoContents
-import com.example.xcamera.ui.Camera.CameraPreviewScreen
-import com.example.xcamera.ui.Camera.CameraViewModel
+import com.example.xcamera.ui.camera.BottomSheetPhotoContents
+import com.example.xcamera.ui.camera.CameraPreviewScreen
+import com.example.xcamera.ui.camera.CameraViewModel
 import com.example.xcamera.ui.theme.XCameraTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+
+@AndroidEntryPoint
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,13 +30,13 @@ class MainActivity : ComponentActivity() {
             XCameraTheme {
 
                 val viewmodel = viewModel<CameraViewModel>()
-                val bitmaps by viewmodel.bitmap.collectAsStateWithLifecycle()
+                val photos by viewmodel.photoUiState.collectAsStateWithLifecycle()
                 val scaffoldState = rememberBottomSheetScaffoldState()
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
                     sheetContent = {
                         BottomSheetPhotoContents(
-                            bitmaps = bitmaps,
+                            photos = photos,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )

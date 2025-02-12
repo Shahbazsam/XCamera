@@ -1,7 +1,5 @@
-package com.example.xcamera.ui.Camera
+package com.example.xcamera.ui.camera
 
-import android.graphics.Bitmap
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,15 +13,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.xcamera.ui.state.PhotoState
+import java.io.File
 
 @Composable
 fun BottomSheetPhotoContents(
-    bitmaps : List<Bitmap>,
+    photos: List<PhotoState> ,
     modifier: Modifier = Modifier
 ) {
-    if(bitmaps.isEmpty()) {
+    if(photos.isEmpty()) {
         Box(
             modifier = modifier
                 .padding(16.dp),
@@ -42,12 +43,13 @@ fun BottomSheetPhotoContents(
             contentPadding = PaddingValues(16.dp),
             modifier = modifier
         ) {
-            items(bitmaps) { bitmaps ->
-                Image(
-                    bitmap = bitmaps.asImageBitmap(),
-                    contentDescription = null,
+            items(photos) { photo ->
+                AsyncImage(
+                    model = File(photo.photoPath),
+                    contentDescription = "Photos",
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
                 )
             }
         }

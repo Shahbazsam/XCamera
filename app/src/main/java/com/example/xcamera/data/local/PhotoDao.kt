@@ -1,4 +1,4 @@
-package com.example.xcamera.data
+package com.example.xcamera.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface PhotoDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun Insert(photos: Photos)
+    suspend fun insert(photos: Photos)
 
     @Delete
     suspend fun delete(photos: Photos)

@@ -1,5 +1,7 @@
-package com.example.xcamera.data
+package com.example.xcamera.data.local
 
+import android.graphics.Bitmap
+import android.graphics.Path
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -7,5 +9,5 @@ import androidx.room.PrimaryKey
 data class Photos(
     @PrimaryKey(autoGenerate = true)
     val id :Int = 0 ,
-    val photos : ByteArray
+    val photoPath : String
 )
