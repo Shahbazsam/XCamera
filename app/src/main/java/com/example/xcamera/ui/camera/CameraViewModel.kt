@@ -1,5 +1,6 @@
 package com.example.xcamera.ui.camera
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
@@ -16,6 +17,13 @@ import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -24,7 +32,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.xcamera.data.local.Photos
 import com.example.xcamera.data.repository.PhotoRepository
 import com.example.xcamera.ui.state.PhotoState
+import com.example.xcamera.ui.state.VideoState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,22 +54,24 @@ class CameraViewModel @Inject constructor(
 ) : ViewModel() {
 
     val photoUiState : StateFlow<List<PhotoState>> = photoRepository.getAllPhotos()
-        .map { photos ->
-            photos.map {
-                PhotoState(
-                    it.id , it.photoPath
-                )
-            }
-        }
+        .map { photos -> photos.map { PhotoState( it.id , it.photoPath) } }
         .stateIn(viewModelScope, SharingStarted.Lazily , emptyList())
 
-    private var surfaceOrientedMeteringPointFactory : SurfaceOrientedMeteringPointFactory ? = null
+    val videoUiState : StateFlow<List<VideoState>> = photoRepository.getAllVideos()
+        .map { videos -> videos.map { VideoState( it.id, it.videoPath ) } }
+        .stateIn(viewModelScope , SharingStarted.Lazily , emptyList())
 
+
+    private var surfaceOrientedMeteringPointFactory : SurfaceOrientedMeteringPointFactory ? = null
     private var cameraSelector : CameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
     private var cameraControl : CameraControl? = null
+    private var videoCaptureUseCase : VideoCapture<Recorder>? = null
+    private var currentRecording : Recording? = null
+    private var recorder : Recorder ? = null
 
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest = _surfaceRequest.asStateFlow()
+    private val qualitySelector = MutableStateFlow(Quality.FHD)
 
     private val cameraUseCaseBuilder = Preview.Builder().build().apply {
         setSurfaceProvider { surfaceRequest ->
@@ -73,24 +85,33 @@ class CameraViewModel @Inject constructor(
 
     private val imageCaptureUseCase = ImageCapture.Builder().build()
 
+    fun setVideoQuality(lifecycleOwner: LifecycleOwner,quality: Quality , context: Context) {
+        qualitySelector.value = quality
+        viewModelScope.launch(Dispatchers.Main) {
+            bindToLifeCycle(lifecycleOwner , context)
+        }
+    }
+
     suspend fun bindToLifeCycle(
         lifecycleOwner: LifecycleOwner,
         context: Context
     ) {
         val processCameraProvider = ProcessCameraProvider.awaitInstance(context)
         processCameraProvider.unbindAll()
+
+        recorder = Recorder.Builder().setQualitySelector(QualitySelector.from(qualitySelector.value)).build()
+        videoCaptureUseCase = VideoCapture.withOutput(recorder!!)
+
         val camera = processCameraProvider.bindToLifecycle(
-            lifecycleOwner,
-            cameraSelector,
-            cameraUseCaseBuilder,
-            imageCaptureUseCase
+            lifecycleOwner, cameraSelector, cameraUseCaseBuilder, imageCaptureUseCase, videoCaptureUseCase
         )
         cameraControl = camera.cameraControl
+
         try {
             awaitCancellation()
         } finally {
             processCameraProvider.unbindAll()
-            cameraControl = null
+            resetCameraStates()
         }
     }
 
@@ -153,9 +174,46 @@ class CameraViewModel @Inject constructor(
         )
     }
 
+    @SuppressLint("MissingPermission")
+    fun startRecording(context: Context) {
+        val directory = File(context.filesDir , "PrivateGallery").apply { if (!exists()) mkdirs() }
+        val file = File(directory , "video_${System.currentTimeMillis()}.mp4" )
+        val fileOutput = FileOutputOptions.Builder(file).build()
+
+        currentRecording = videoCaptureUseCase?.output?.prepareRecording(context , fileOutput)
+            ?.withAudioEnabled()
+            ?.start(ContextCompat.getMainExecutor(context)) { event ->
+                when(event) {
+                    is VideoRecordEvent.Start -> {
+                        Log.d("CameraViewModel", "Recording started")
+                    }
+                    is VideoRecordEvent.Finalize -> {
+                        Log.d("CameraViewModel", "Recording saved at: ${file.absolutePath}")
+                    }
+                }
+            }
+        viewModelScope.launch {
+            photoRepository.insertVideo(
+                Photos(
+                    videoPath = file.absolutePath
+                )
+            )
+        }
+    }
+
+    fun pauseRecording() { currentRecording?.pause() }
+    fun resumeRecording() { currentRecording?.resume() }
+    fun stopRecording() {
+        if (currentRecording == null) {
+            Log.e("CameraViewModel", "No recording in progress!")
+            return
+        }
+        currentRecording?.stop()
+        currentRecording = null
+    }
+
     private fun savePhotoPrivately(context: Context , bitmap : Bitmap) : String {
-        val directory = File(context.filesDir , "PrivateGallery")
-        if (!directory.exists()) directory.mkdirs()
+        val directory = File(context.filesDir , "PrivateGallery").apply { if (!exists()) mkdirs() }
 
         val file  = File(directory , "photo_${System.currentTimeMillis()}.jpg")
         val outputStream = FileOutputStream(file)
@@ -167,20 +225,24 @@ class CameraViewModel @Inject constructor(
 
     fun deletePhoto(photo : Photos) {
         viewModelScope.launch {
-            val file = File(photo.photoPath)
-            if (file.exists()) {
-                file.delete()
-            }
+            photo.photoPath?.let { File(it).delete() }
+            photo.videoPath?.let { File(it).delete() }
+
             photoRepository.deletePhoto( photo )
         }
     }
 
-    fun getPhotoById(id: Int) {
+    fun getPhotoOrVideoById(id: Int) {
         viewModelScope.launch {
-            photoRepository.getPhotoById(
+            photoRepository.getPhotoOrVideoById(
                 id
             )
         }
+    }
+    private fun resetCameraStates() {
+        cameraControl = null
+        videoCaptureUseCase = null
+        currentRecording = null
     }
 
 }

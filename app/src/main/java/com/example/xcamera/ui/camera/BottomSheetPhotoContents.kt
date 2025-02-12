@@ -21,7 +21,7 @@ import java.io.File
 
 @Composable
 fun BottomSheetPhotoContents(
-    photos: List<PhotoState> ,
+    photos: List<PhotoState>,
     modifier: Modifier = Modifier
 ) {
     if(photos.isEmpty()) {
@@ -45,7 +45,7 @@ fun BottomSheetPhotoContents(
         ) {
             items(photos) { photo ->
                 AsyncImage(
-                    model = File(photo.photoPath),
+                    model = photo.photoPath?.let { File(it) },
                     contentDescription = "Photos",
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp)),

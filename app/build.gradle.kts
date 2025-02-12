@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.accompanist.permissions)
+    implementation("androidx.camera:camera-video:1.4.1")
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.material.icons.extended.android)

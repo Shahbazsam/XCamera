@@ -7,16 +7,22 @@ import kotlinx.coroutines.flow.Flow
 interface PhotoRepository  {
 
     suspend fun insertPhoto(photos: Photos)
+    suspend fun insertVideo(photos: Photos)
     suspend fun deletePhoto(photos: Photos)
     fun getAllPhotos() : Flow<List<Photos>>
-    fun getPhotoById(photoId : Int) : Flow<Photos>
+    fun getAllVideos() : Flow<List<Photos>>
+    fun getPhotoOrVideoById(photoId : Int) : Flow<Photos>
 
 }
 
 class ImplPhotoRepository(private val photoDao: PhotoDao) : PhotoRepository {
 
     override suspend fun insertPhoto(photos: Photos) {
-        photoDao.insert(photos)
+        photoDao.insertPhoto(photos)
+    }
+
+    override suspend fun insertVideo(photos: Photos) {
+        photoDao.insertVideo(photos)
     }
 
     override suspend fun deletePhoto(photos: Photos) {
@@ -27,9 +33,11 @@ class ImplPhotoRepository(private val photoDao: PhotoDao) : PhotoRepository {
         return photoDao.getAllPhoto()
     }
 
-    override fun getPhotoById(photoId: Int): Flow<Photos> {
-        return photoDao.getPhotoById(photoId)
+    override fun getAllVideos(): Flow<List<Photos>> {
+        return photoDao.getAllVideos()
     }
 
-
+    override fun getPhotoOrVideoById(photoId: Int): Flow<Photos> {
+        return photoDao.getPhotoOrVideoById(photoId)
+    }
 }

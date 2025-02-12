@@ -9,5 +9,6 @@ import androidx.room.PrimaryKey
 data class Photos(
     @PrimaryKey(autoGenerate = true)
     val id :Int = 0 ,
-    val photoPath : String
+    val photoPath : String? = null ,
+    val videoPath : String? = null
 )
