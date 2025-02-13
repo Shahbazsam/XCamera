@@ -62,6 +62,7 @@ class CameraViewModel @Inject constructor(
         .stateIn(viewModelScope , SharingStarted.Lazily , emptyList())
 
 
+
     private var surfaceOrientedMeteringPointFactory : SurfaceOrientedMeteringPointFactory ? = null
     private var cameraSelector : CameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
     private var cameraControl : CameraControl? = null
@@ -71,7 +72,7 @@ class CameraViewModel @Inject constructor(
 
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest = _surfaceRequest.asStateFlow()
-    private val qualitySelector = MutableStateFlow(Quality.FHD)
+    val qualitySelector = MutableStateFlow(Quality.FHD)
 
     private val cameraUseCaseBuilder = Preview.Builder().build().apply {
         setSurfaceProvider { surfaceRequest ->
@@ -122,6 +123,7 @@ class CameraViewModel @Inject constructor(
             CameraSelector.DEFAULT_FRONT_CAMERA
         }
         viewModelScope.launch {
+
             bindToLifeCycle(lifecycleOwner, context)
         }
     }
