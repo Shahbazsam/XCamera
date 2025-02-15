@@ -4,13 +4,10 @@ package com.example.xcamera.ui.camera
 
 import android.content.Context
 import androidx.camera.compose.CameraXViewfinder
-import androidx.camera.video.Quality
-import androidx.camera.viewfinder.compose.CoordinateTransformer
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +36,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,26 +50,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.geometry.takeOrElse
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.xcamera.R
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -142,8 +135,8 @@ fun CameraPreviewContent(
     context: Context = LocalContext.current
     ) {
 
-    val quality by remember { mutableStateOf(viewModel.qualitySelector) }
-    val qualitySelector by remember { mutableStateOf(false) }
+    val quality by viewModel.qualitySelector.collectAsStateWithLifecycle()
+    var qualitySelector by remember { mutableStateOf(false) }
 
     var isVideoMode by remember { mutableStateOf(false) }
     var isRecording by remember { mutableStateOf(false) }
@@ -208,21 +201,45 @@ fun CameraPreviewContent(
                 Spacer(Modifier.border(2.dp , Color.White , CircleShape).size(48.dp))
             }
         }
-
-        Row(
+        Box (
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 140.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp)
+        ){
+            CameraQualitySelector(
+                quality = quality,
+                qualitySelector = qualitySelector,
+                onQualitySelectorChange = {qualitySelector = !qualitySelector} ,
+                onQualitySelected = { selectedQuality ->
+                    viewModel.setVideoQuality(lifecycleOwner , selectedQuality  , context)
+                }
+            )
+        }
+        Column (
+            modifier = Modifier
                 .align(Alignment.BottomCenter),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Text(
+        ){
+            Divider(
+                color = Color.White,
+                thickness = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 140.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+
+                Text(
                     modifier = Modifier
                         .clickable {
                             isVideoMode = false
                         },
                     text = "photo",
-                    color = if (isVideoMode == false) Color.White else Color.Gray
+                    color = if (!isVideoMode) Color.White else Color.Gray
                 )
                 Text(
                     modifier = Modifier
@@ -230,10 +247,11 @@ fun CameraPreviewContent(
                             isVideoMode = true
                         },
                     text = "video",
-                    color = if (isVideoMode == true) Color.White else Color.Gray
+                    color = if (isVideoMode) Color.White else Color.Gray
                 )
+            }
         }
-        if (isVideoMode == false) {
+        if (!isVideoMode) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

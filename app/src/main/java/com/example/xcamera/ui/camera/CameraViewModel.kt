@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.util.Log
 import androidx.camera.core.CameraControl
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
@@ -69,6 +70,7 @@ class CameraViewModel @Inject constructor(
     private var videoCaptureUseCase : VideoCapture<Recorder>? = null
     private var currentRecording : Recording? = null
     private var recorder : Recorder ? = null
+    private var cameraInfo : CameraInfo? = null
 
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest = _surfaceRequest.asStateFlow()
@@ -86,12 +88,21 @@ class CameraViewModel @Inject constructor(
 
     private val imageCaptureUseCase = ImageCapture.Builder().build()
 
-    fun setVideoQuality(lifecycleOwner: LifecycleOwner,quality: Quality , context: Context) {
-        qualitySelector.value = quality
-        viewModelScope.launch(Dispatchers.Main) {
-            bindToLifeCycle(lifecycleOwner , context)
+    fun setVideoQuality(lifecycleOwner: LifecycleOwner, quality: Quality, context: Context) {
+        viewModelScope.launch {
+           cameraInfo?.let { info ->
+               val supportedQualities = QualitySelector.getSupportedQualities(info)
+
+               if (quality in supportedQualities) {
+                   qualitySelector.value = quality
+                   bindToLifeCycle(lifecycleOwner, context)
+               } else {
+                   Log.e("CameraViewModel", "Selected quality $quality is not supported!")
+               }
+           } ?: Log.e("CameraViewModel", "Camera not initialized yet!")
         }
     }
+
 
     suspend fun bindToLifeCycle(
         lifecycleOwner: LifecycleOwner,
@@ -107,6 +118,7 @@ class CameraViewModel @Inject constructor(
             lifecycleOwner, cameraSelector, cameraUseCaseBuilder, imageCaptureUseCase, videoCaptureUseCase
         )
         cameraControl = camera.cameraControl
+        cameraInfo = camera.cameraInfo
 
         try {
             awaitCancellation()
