@@ -141,6 +141,7 @@ class CameraViewModel @Inject constructor(
             CameraSelector.DEFAULT_BACK_CAMERA
         }else {
             CameraSelector.DEFAULT_FRONT_CAMERA
+
         }
         viewModelScope.launch {
 
