@@ -28,6 +28,8 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.xcamera.data.local.Photos
@@ -71,6 +73,9 @@ class CameraViewModel @Inject constructor(
     private var currentRecording : Recording? = null
     private var recorder : Recorder ? = null
     private var cameraInfo : CameraInfo? = null
+    val cameraSelectorInfo = cameraSelector
+    private val _zoomState = MutableLiveData<Pair<Float , Float>>()
+    val zoomState : LiveData<Pair<Float,Float>> = _zoomState
 
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest = _surfaceRequest.asStateFlow()
@@ -119,6 +124,9 @@ class CameraViewModel @Inject constructor(
         )
         cameraControl = camera.cameraControl
         cameraInfo = camera.cameraInfo
+        val local = cameraInfo
+
+        val minZoom = local?.zoomState?.value?.minZoomRatio ?: 1.0f
 
         try {
             awaitCancellation()
@@ -158,15 +166,19 @@ class CameraViewModel @Inject constructor(
                 override fun onCaptureSuccess(image: ImageProxy) {
                     super.onCaptureSuccess(image)
 
-                    val matrix = Matrix().apply {
-                        postRotate((image.imageInfo.rotationDegrees.toFloat()))
+                    val originalBitmap = image.toBitmap()
+                    val matrix = Matrix()
+                    matrix.postRotate(image.imageInfo.rotationDegrees.toFloat())
+                    if (cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                        matrix.postScale(-1f, 1f, )
                     }
+
                     val rotatedBitmap = Bitmap.createBitmap(
-                        image.toBitmap(),
+                        originalBitmap,
                         0,
                         0,
-                        image.width,
-                        image.height,
+                        originalBitmap.width,
+                        originalBitmap.height,
                         matrix,
                         true
                     )

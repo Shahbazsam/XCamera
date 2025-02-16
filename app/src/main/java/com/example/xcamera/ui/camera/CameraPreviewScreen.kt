@@ -63,7 +63,9 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -88,42 +90,51 @@ fun CameraPreviewScreen(
             scaffoldState
         )
     } else {
-        Column (
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxHeight()
-                .background(color = Color.DarkGray),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ){
-            val text = if (cameraPermissionState.shouldShowRationale) {
-                "Whoops! Looks like we need your camera to work our magic!" +
-                        "Don't worry, we just wanna see your pretty face (and maybe some cats).  " +
-                        "Grant us permission and let's get this party started!"
-            } else {
-                "Hi there! We need your camera to work our magic! ✨\n" +
-                        "Grant us permission and let's get this party started! \uD83C\uDF89"
-            }
-            Text(
-                text,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(22.dp))
-            Button(
-                onClick = {
-                    cameraPermissionState.launchMultiplePermissionRequest()
-                },
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-            ) {
-                Text(
-                    text = "Grant Permissions",
-                    textAlign = TextAlign.Center
-                )
-            }
-
-        }
+        CameraPermissionContent(innerPadding, cameraPermissionState)
     }
+}
+
+@Composable
+fun CameraPermissionContent(
+    innerPadding: PaddingValues,
+    cameraPermissionState: MultiplePermissionsState
+) {
+    Column (
+        modifier = Modifier
+            .padding(innerPadding)
+            .fillMaxHeight()
+            .background(color = Color.DarkGray),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ){
+        val text = if (cameraPermissionState.shouldShowRationale) {
+            "Whoops! Looks like we need your camera to work our magic!" +
+                    "Don't worry, we just wanna see your pretty face (and maybe some cats).  " +
+                    "Grant us permission and let's get this party started!"
+        } else {
+            "Hi there! We need your camera to work our magic! ✨\n" +
+                    "Grant us permission and let's get this party started! \uD83C\uDF89"
+        }
+        Text(
+            text,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(22.dp))
+        Button(
+            onClick = {
+                cameraPermissionState.launchMultiplePermissionRequest()
+            },
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                text = "Grant Permissions",
+                textAlign = TextAlign.Center
+            )
+        }
+
+    }
+
 }
 
 @Composable
@@ -134,18 +145,21 @@ fun CameraPreviewContent(
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
     context: Context = LocalContext.current
     ) {
-
+    //states for quality and mode
     val quality by viewModel.qualitySelector.collectAsStateWithLifecycle()
     var qualitySelector by remember { mutableStateOf(false) }
-
     var isVideoMode by remember { mutableStateOf(false) }
+
+    // Video recording state
     var isRecording by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
     var recordingTime by remember { mutableStateOf(0) }
 
+    // Surface request state
     val surfaceRequest = viewModel.surfaceRequest.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
+    // Auto Focus state
     var autoFocusRequest by remember { mutableStateOf(UUID.randomUUID() to Offset.Unspecified)  }
     val autoFocusRequestId = autoFocusRequest.first
     val showAutoFocusIndicator = autoFocusRequest.second.isSpecified
@@ -195,10 +209,12 @@ fun CameraPreviewContent(
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier
-                    .offset{autoFocusCoords.takeOrElse { Offset.Zero }.round()}
-                    .offset((-24).dp,(-24).dp)
+                    .offset { autoFocusCoords.takeOrElse { Offset.Zero }.round() }
+                    .offset((-24).dp, (-24).dp)
             ) {
-                Spacer(Modifier.border(2.dp , Color.White , CircleShape).size(48.dp))
+                Spacer(Modifier
+                    .border(2.dp, Color.White, CircleShape)
+                    .size(48.dp))
             }
         }
         Box (
@@ -259,38 +275,12 @@ fun CameraPreviewContent(
                     .align(Alignment.BottomCenter),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            scaffoldState.bottomSheetState.expand()
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Photo,
-                        contentDescription = "Open Gallery "
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        viewModel.takePhoto(context)
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Camera,
-                        contentDescription = "Take Photo"
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        viewModel.switchCamera(lifecycleOwner, context)
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cameraswitch,
-                        contentDescription = "Switch Camera"
-                    )
-                }
+                PhotoControls(
+                    viewModel = viewModel,
+                    scaffoldState = scaffoldState,
+                    scope = scope,
+                    context = context
+                )
             }
         }else {
             Row (
@@ -300,98 +290,163 @@ fun CameraPreviewContent(
                     .align(Alignment.BottomCenter),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ){
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            scaffoldState.bottomSheetState.expand()
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Photo,
-                        contentDescription = "Open Gallery "
-                    )
-                }
-                if ( isRecording  && !isPaused ) {
-                    IconButton(
-                        onClick = {
-                            viewModel.pauseRecording()
-                            isPaused = true
-                            isRecording = false
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Pause,
-                            contentDescription = "pause Video"
-                        )
-                    }
-                    Text(
-                        text = "$recordingTime Sec",
-                    )
-                    IconButton(
-                        onClick = {
-                            viewModel.stopRecording()
-                            isRecording = false
-                            recordingTime = 0
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Stop,
-                            contentDescription = "stop video"
-                        )
-                    }
-
-                } else if(!isRecording && isPaused) {
-                    IconButton(
-                        onClick = {
-                            viewModel.resumeRecording()
-                            isRecording = true
-                            isPaused = false
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Repeat,
-                            contentDescription = "resume"
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            viewModel.stopRecording()
-                            isRecording = false
-                            recordingTime = 0
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Stop,
-                            contentDescription = "stop video"
-                        )
-                    }
-                }else {
-                    IconButton(
-                        onClick = {
-                            viewModel.startRecording(context)
-                            isRecording = true
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Videocam,
-                            contentDescription = "Take Photo"
-                        )
-                    }
-                }
-                IconButton(
-                    onClick = {
-                        viewModel.switchCamera(lifecycleOwner, context)
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Cameraswitch,
-                        contentDescription = "Switch Camera"
-                    )
-                }
-
+                VideoControls(
+                    viewModel = viewModel,
+                    scaffoldState = scaffoldState,
+                    scope = scope,
+                    isRecording = isRecording,
+                    isPaused = isPaused,
+                    recordingTime = recordingTime,
+                    onRecordingStateChange = { recording, paused, time ->
+                        isRecording = recording
+                        isPaused = paused
+                        recordingTime = time
+                    },
+                    lifecycleOwner = lifecycleOwner,
+                    context = context
+                )
             }
-
         }
+    }
+}
+
+@Composable
+fun PhotoControls(
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
+    viewModel: CameraViewModel,
+    scaffoldState: BottomSheetScaffoldState,
+    scope: CoroutineScope,
+    context: Context,
+    ) {
+    IconButton(
+        onClick = {
+            scope.launch {
+                scaffoldState.bottomSheetState.expand()
+            }
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Photo,
+            contentDescription = "Open Gallery "
+        )
+    }
+    IconButton(
+        onClick = {
+            viewModel.takePhoto(context)
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Camera,
+            contentDescription = "Take Photo"
+        )
+    }
+    IconButton(
+        onClick = {
+            viewModel.switchCamera(lifecycleOwner, context)
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Cameraswitch,
+            contentDescription = "Switch Camera"
+        )
+    }
+}
+
+@Composable
+fun VideoControls(
+    viewModel: CameraViewModel,
+    scaffoldState: BottomSheetScaffoldState,
+    scope: CoroutineScope,
+    isRecording: Boolean,
+    isPaused: Boolean,
+    recordingTime: Int,
+    onRecordingStateChange: (Boolean, Boolean, Int) -> Unit,
+    lifecycleOwner: LifecycleOwner,
+    context: Context
+) {
+    IconButton(
+        onClick = {
+            scope.launch {
+                scaffoldState.bottomSheetState.expand()
+            }
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Photo,
+            contentDescription = "Open Gallery "
+        )
+    }
+    if ( isRecording  && !isPaused ) {
+        IconButton(
+            onClick = {
+                viewModel.pauseRecording()
+                onRecordingStateChange(false , true , recordingTime)
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Pause,
+                contentDescription = "pause Video"
+            )
+        }
+        Text(
+            text = "$recordingTime Sec",
+        )
+        IconButton(
+            onClick = {
+                viewModel.stopRecording()
+                onRecordingStateChange(false,false, 0)
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Stop,
+                contentDescription = "stop video"
+            )
+        }
+
+    } else if(!isRecording && isPaused) {
+        IconButton(
+            onClick = {
+                viewModel.resumeRecording()
+                onRecordingStateChange(true, false, recordingTime)
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Repeat,
+                contentDescription = "resume"
+            )
+        }
+        IconButton(
+            onClick = {
+                viewModel.stopRecording()
+                onRecordingStateChange(false, false, 0)
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Stop,
+                contentDescription = "stop video"
+            )
+        }
+    }else {
+        IconButton(
+            onClick = {
+                viewModel.startRecording(context)
+                onRecordingStateChange(true, false, 0)
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Videocam,
+                contentDescription = "Take Photo"
+            )
+        }
+    }
+    IconButton(
+        onClick = {
+            viewModel.switchCamera(lifecycleOwner, context)
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Default.Cameraswitch,
+            contentDescription = "Switch Camera"
+        )
     }
 }
