@@ -16,6 +16,7 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.core.SurfaceRequest
+import androidx.camera.core.ZoomState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.video.FileOutputOptions
@@ -50,6 +51,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
+import kotlin.math.max
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
@@ -67,15 +69,17 @@ class CameraViewModel @Inject constructor(
 
 
     private var surfaceOrientedMeteringPointFactory : SurfaceOrientedMeteringPointFactory ? = null
-    private var cameraSelector : CameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+    private val _cameraSelectorInfo = MutableStateFlow(CameraSelector.DEFAULT_FRONT_CAMERA)
+    val cameraSelectorInfo: StateFlow<CameraSelector> = _cameraSelectorInfo.asStateFlow()
     private var cameraControl : CameraControl? = null
     private var videoCaptureUseCase : VideoCapture<Recorder>? = null
     private var currentRecording : Recording? = null
     private var recorder : Recorder ? = null
     private var cameraInfo : CameraInfo? = null
-    val cameraSelectorInfo = cameraSelector
-    private val _zoomState = MutableLiveData<Pair<Float , Float>>()
-    val zoomState : LiveData<Pair<Float,Float>> = _zoomState
+    private val _zoomState = MutableStateFlow(Pair(1.0f , 10.0f))
+    val zoomState  = _zoomState.asStateFlow()
+    private val _currentZoom = MutableStateFlow(1.0f)
+    val currentZoom = _currentZoom.asStateFlow()
 
     private val _surfaceRequest = MutableStateFlow<SurfaceRequest?>(null)
     val surfaceRequest = _surfaceRequest.asStateFlow()
@@ -120,13 +124,15 @@ class CameraViewModel @Inject constructor(
         videoCaptureUseCase = VideoCapture.withOutput(recorder!!)
 
         val camera = processCameraProvider.bindToLifecycle(
-            lifecycleOwner, cameraSelector, cameraUseCaseBuilder, imageCaptureUseCase, videoCaptureUseCase
+            lifecycleOwner, cameraSelectorInfo.value, cameraUseCaseBuilder, imageCaptureUseCase, videoCaptureUseCase
         )
         cameraControl = camera.cameraControl
         cameraInfo = camera.cameraInfo
-        val local = cameraInfo
 
-        val minZoom = local?.zoomState?.value?.minZoomRatio ?: 1.0f
+        cameraInfo?.zoomState?.value?.let { zoomState->
+            _zoomState.value = Pair(zoomState.minZoomRatio , zoomState.maxZoomRatio)
+            _currentZoom.value = zoomState.zoomRatio
+        }
 
         try {
             awaitCancellation()
@@ -137,16 +143,38 @@ class CameraViewModel @Inject constructor(
     }
 
     fun switchCamera(lifecycleOwner: LifecycleOwner , context: Context) {
-        cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA ) {
-            CameraSelector.DEFAULT_BACK_CAMERA
-        }else {
-            CameraSelector.DEFAULT_FRONT_CAMERA
-
-        }
         viewModelScope.launch {
-
+            _cameraSelectorInfo.value = if (_cameraSelectorInfo.value == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            } else {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            }
             bindToLifeCycle(lifecycleOwner, context)
         }
+    }
+
+    fun setZoomRatio(zoomRatio : Float) {
+        viewModelScope.launch {
+            cameraControl?.setZoomRatio(zoomRatio)
+            _currentZoom.value = zoomRatio
+        }
+    }
+
+    fun setLinearZoom(zoomRatio : Float) {
+        viewModelScope.launch {
+            cameraControl?.setLinearZoom(zoomRatio)
+            _currentZoom.value = linearZoomToZoomRatio(zoomRatio)
+        }
+    }
+
+    private fun linearZoomToZoomRatio(linearZoom : Float) : Float {
+        val ( minZoom , maxZoom) = _zoomState.value
+        return minZoom + (maxZoom - minZoom) * linearZoom
+    }
+
+    fun zoomRatioToLinearZoom(zoomRatio: Float): Float {
+        val (minZoom, maxZoom) = _zoomState.value
+        return (zoomRatio - minZoom) / (maxZoom - minZoom)
     }
 
     fun tapToFocus( tapCoords : Offset) {
@@ -170,7 +198,7 @@ class CameraViewModel @Inject constructor(
                     val originalBitmap = image.toBitmap()
                     val matrix = Matrix()
                     matrix.postRotate(image.imageInfo.rotationDegrees.toFloat())
-                    if (cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA) {
+                    if (cameraSelectorInfo.value == CameraSelector.DEFAULT_FRONT_CAMERA) {
                         matrix.postScale(-1f, 1f, )
                     }
 

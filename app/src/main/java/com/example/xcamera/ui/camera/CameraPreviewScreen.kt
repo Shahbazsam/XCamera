@@ -4,6 +4,7 @@ package com.example.xcamera.ui.camera
 
 import android.content.Context
 import androidx.camera.compose.CameraXViewfinder
+import androidx.camera.core.CameraSelector
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -40,6 +41,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -165,6 +167,14 @@ fun CameraPreviewContent(
     val showAutoFocusIndicator = autoFocusRequest.second.isSpecified
     val autoFocusCoords = remember(autoFocusRequestId) {autoFocusRequest.second }
 
+    // Zooming Variables
+    val zoomState  by viewModel.zoomState.collectAsStateWithLifecycle()
+    val currentZoom by viewModel.currentZoom.collectAsStateWithLifecycle()
+    val(minZoom , maxZoom) = zoomState
+
+    // current camera
+    val currentCamera = viewModel.cameraSelectorInfo.collectAsStateWithLifecycle()
+
     LaunchedEffect(isRecording && !isPaused) {
         while (isRecording){
             delay(1000)
@@ -236,6 +246,34 @@ fun CameraPreviewContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter),
         ){
+            if (currentCamera.value == CameraSelector.DEFAULT_BACK_CAMERA) {
+                Slider(
+                    value = viewModel.zoomRatioToLinearZoom(currentZoom),
+                    valueRange = 0f..1f,
+                    onValueChange = { linearZoom ->
+                        viewModel.setLinearZoom(linearZoom)
+                    },
+                    modifier = Modifier.padding(16.dp)
+                )
+                Text(
+                    text = "Zoom: ${String.format("%.1fx" , currentZoom)}",
+                    modifier = Modifier
+                        .padding(16.dp),
+                    color = Color.White
+                )
+                Row(modifier = Modifier.fillMaxWidth() , horizontalArrangement = Arrangement.SpaceEvenly) {
+                    if (minZoom < 1.0f){
+                        Button(onClick = { viewModel.setZoomRatio(minZoom) }) { Text("${minZoom}x") }
+                        Button(onClick = { viewModel.setZoomRatio(1.0f) }) { Text("1x") }
+                    }else {
+                        Button(onClick = { viewModel.setZoomRatio(1.0f) }) { Text("1x") }
+                    }
+                    Button(onClick = { viewModel.setZoomRatio(3.0f) }) { Text("3x") }
+                    Button(onClick = { viewModel.setZoomRatio(5.0f) }) { Text("5x") }
+                    Button(onClick = { viewModel.setZoomRatio(maxZoom) }) { Text("${maxZoom}x") }
+                }
+            }
+
             Divider(
                 color = Color.White,
                 thickness = 2.dp,
