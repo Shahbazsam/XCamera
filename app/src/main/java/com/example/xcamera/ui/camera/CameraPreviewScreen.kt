@@ -134,9 +134,7 @@ fun CameraPermissionContent(
                 textAlign = TextAlign.Center
             )
         }
-
     }
-
 }
 
 @Composable
@@ -199,7 +197,6 @@ fun CameraPreviewContent(
             .fillMaxSize()
             .padding(innerPadding)
     ) {
-
         surfaceRequest.value?.let { request ->
             val coordinateTransformer = remember { MutableCoordinateTransformer() }
             CameraXViewfinder(
@@ -273,7 +270,6 @@ fun CameraPreviewContent(
                     Button(onClick = { viewModel.setZoomRatio(maxZoom) }) { Text("${maxZoom}x") }
                 }
             }
-
             Divider(
                 color = Color.White,
                 thickness = 2.dp,
@@ -286,7 +282,6 @@ fun CameraPreviewContent(
                     .padding(bottom = 140.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-
                 Text(
                     modifier = Modifier
                         .clickable {
@@ -440,7 +435,6 @@ fun VideoControls(
                 contentDescription = "stop video"
             )
         }
-
     } else if(!isRecording && isPaused) {
         IconButton(
             onClick = {

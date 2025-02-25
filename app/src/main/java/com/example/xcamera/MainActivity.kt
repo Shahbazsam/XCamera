@@ -31,12 +31,14 @@ class MainActivity : ComponentActivity() {
 
                 val viewmodel = viewModel<CameraViewModel>()
                 val photos by viewmodel.photoUiState.collectAsStateWithLifecycle()
+                val videos by viewmodel.videoUiState.collectAsStateWithLifecycle()
                 val scaffoldState = rememberBottomSheetScaffoldState()
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
                     sheetContent = {
                         BottomSheetPhotoContents(
                             photos = photos,
+                            videos = videos,
                             modifier = Modifier
                                 .fillMaxWidth()
                         )

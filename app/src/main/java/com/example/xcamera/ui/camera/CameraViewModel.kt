@@ -67,7 +67,6 @@ class CameraViewModel @Inject constructor(
         .stateIn(viewModelScope , SharingStarted.Lazily , emptyList())
 
 
-
     private var surfaceOrientedMeteringPointFactory : SurfaceOrientedMeteringPointFactory ? = null
     private val _cameraSelectorInfo = MutableStateFlow(CameraSelector.DEFAULT_FRONT_CAMERA)
     val cameraSelectorInfo: StateFlow<CameraSelector> = _cameraSelectorInfo.asStateFlow()
@@ -101,7 +100,6 @@ class CameraViewModel @Inject constructor(
         viewModelScope.launch {
            cameraInfo?.let { info ->
                val supportedQualities = QualitySelector.getSupportedQualities(info)
-
                if (quality in supportedQualities) {
                    qualitySelector.value = quality
                    bindToLifeCycle(lifecycleOwner, context)
@@ -111,7 +109,6 @@ class CameraViewModel @Inject constructor(
            } ?: Log.e("CameraViewModel", "Camera not initialized yet!")
         }
     }
-
 
     suspend fun bindToLifeCycle(
         lifecycleOwner: LifecycleOwner,
@@ -133,7 +130,6 @@ class CameraViewModel @Inject constructor(
             _zoomState.value = Pair(zoomState.minZoomRatio , zoomState.maxZoomRatio)
             _currentZoom.value = zoomState.zoomRatio
         }
-
         try {
             awaitCancellation()
         } finally {
@@ -182,13 +178,11 @@ class CameraViewModel @Inject constructor(
         if(point != null) {
             val meteringAction = FocusMeteringAction.Builder(point)
                 .build()
-
             cameraControl?.startFocusAndMetering(meteringAction)
         }
     }
 
     fun takePhoto(context: Context) {
-
         imageCaptureUseCase.takePicture(
             ContextCompat.getMainExecutor(context),
             object : OnImageCapturedCallback() {
@@ -220,7 +214,6 @@ class CameraViewModel @Inject constructor(
                         )
                     }
                 }
-
                 override fun onError(exception: ImageCaptureException) {
                     super.onError(exception)
                     Log.e("Camera " ," Couldn't Take photo ", exception)
@@ -269,7 +262,6 @@ class CameraViewModel @Inject constructor(
 
     private fun savePhotoPrivately(context: Context , bitmap : Bitmap) : String {
         val directory = File(context.filesDir , "PrivateGallery").apply { if (!exists()) mkdirs() }
-
         val file  = File(directory , "photo_${System.currentTimeMillis()}.jpg")
         val outputStream = FileOutputStream(file)
         bitmap.compress(Bitmap.CompressFormat.JPEG , 100 , outputStream)
@@ -299,5 +291,4 @@ class CameraViewModel @Inject constructor(
         videoCaptureUseCase = null
         currentRecording = null
     }
-
 }
