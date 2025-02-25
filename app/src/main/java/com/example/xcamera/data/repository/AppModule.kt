@@ -1,6 +1,7 @@
 package com.example.xcamera.data.repository
 
 import android.content.Context
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.room.Room
 import com.example.xcamera.data.local.PhotoDao
 import com.example.xcamera.data.local.PhotoDatabase
@@ -37,5 +38,11 @@ object AppModule {
     @Singleton
     fun providesPhotoRepository(photoDao: PhotoDao) : PhotoRepository {
         return  ImplPhotoRepository(photoDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideExoPlayer(@ApplicationContext context: Context) : ExoPlayer {
+        return ExoPlayer.Builder(context).build()
     }
 }

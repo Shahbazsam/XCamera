@@ -1,18 +1,30 @@
 package com.example.xcamera.ui.camera
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.media.ThumbnailUtils
+import android.provider.MediaStore
 import android.util.Log
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,7 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.xcamera.ui.state.PhotoState
@@ -139,14 +153,49 @@ fun VideoStateList(
         modifier = modifier
     ) {
         items(videos) { video ->
-            AsyncImage(
+            val context = LocalContext.current
+            val thumbnail = remember(video.videoPath) {
+               video.videoPath?.let { getVideoThumbnail(context , video.videoPath) }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { video.videoPath?.let { onVideoClick(it) } } // Open player on click
+            ) {
+                thumbnail?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = "Video Thumbnail",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play Video",
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(48.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        .padding(8.dp),
+                    tint = Color.White
+                )
+            }
+        }
+
+            /*AsyncImage(
                 model = video.videoPath?.let { File(it) },
                 contentDescription = "Videos",
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
-            )
-        }
+            )*/
     }
+}
 
+fun getVideoThumbnail(context: Context , videoPath : String) : Bitmap? {
+    return ThumbnailUtils.createVideoThumbnail(
+        videoPath,
+        MediaStore.Video.Thumbnails.MINI_KIND
+    )
 }
