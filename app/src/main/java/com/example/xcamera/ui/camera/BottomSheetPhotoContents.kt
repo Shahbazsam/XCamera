@@ -39,13 +39,16 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.xcamera.VideoPlayer
 import com.example.xcamera.ui.state.PhotoState
 import com.example.xcamera.ui.state.VideoState
 import java.io.File
 
 @Composable
 fun BottomSheetPhotoContents(
+    navController: NavController,
     photos: List<PhotoState>,
     videos : List<VideoState>,
     modifier: Modifier = Modifier
@@ -111,7 +114,7 @@ fun BottomSheetPhotoContents(
             }
         } else {
             Log.d("BottomSheet", "Videos list size: ${videos.size}")
-            VideoStateList(videos, modifier)
+            VideoStateList(navController,videos, modifier)
         }
     }
 }
@@ -142,6 +145,7 @@ fun PhotosStateList(
 
 @Composable
 fun VideoStateList(
+    navController: NavController,
     videos : List<VideoState>,
     modifier: Modifier
 ) {
@@ -160,7 +164,11 @@ fun VideoStateList(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable { video.videoPath?.let { onVideoClick(it) } } // Open player on click
+                    .clickable { video.videoPath?.let {
+                        navController.navigate(VideoPlayer(
+                            path = it
+                        ))
+                    } } // Open player on click
             ) {
                 thumbnail?.let {
                     Image(

@@ -28,30 +28,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             XCameraTheme {
-
-                val viewmodel = viewModel<CameraViewModel>()
-                val photos by viewmodel.photoUiState.collectAsStateWithLifecycle()
-                val videos by viewmodel.videoUiState.collectAsStateWithLifecycle()
-                val scaffoldState = rememberBottomSheetScaffoldState()
-                BottomSheetScaffold(
-                    scaffoldState = scaffoldState,
-                    sheetContent = {
-                        BottomSheetPhotoContents(
-                            photos = photos,
-                            videos = videos,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        )
-                    },
-                    sheetPeekHeight = 0.dp
-                ) {  innerPadding ->
-
-                        CameraPreviewScreen(
-                            viewmodel,
-                            innerPadding,
-                            scaffoldState,
-                        )
-                }
+                val viewModel = viewModel<CameraViewModel>()
+                AppNavigationManager()
             }
         }
     }

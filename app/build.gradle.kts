@@ -76,6 +76,9 @@ dependencies {
 
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0") // ✅ Required for hiltViewModel()
+
+
 
     // Coil
     implementation("io.coil-kt:coil-compose:2.5.0")
@@ -85,6 +88,6 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:1.5.1")
 
     implementation("androidx.navigation:navigation-compose:2.8.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
 }

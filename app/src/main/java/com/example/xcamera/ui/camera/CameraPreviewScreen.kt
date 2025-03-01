@@ -3,6 +3,7 @@
 package com.example.xcamera.ui.camera
 
 import android.content.Context
+import android.util.Log
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.CameraSelector
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.BottomSheetScaffoldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
@@ -43,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,9 +64,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -71,6 +77,37 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+
+@Composable
+fun CameraScaffoldScreen(navController: NavController) {
+    Log.d("nav" , "nav after")
+    val viewmodel : CameraViewModel = hiltViewModel()
+    val photos by viewmodel.photoUiState.collectAsStateWithLifecycle()
+    val videos by viewmodel.videoUiState.collectAsStateWithLifecycle()
+    val scaffoldState = rememberBottomSheetScaffoldState()
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetContent = {
+            BottomSheetPhotoContents(
+                navController = navController,
+                photos = photos,
+                videos = videos,
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+        },
+        sheetPeekHeight = 0.dp
+    ) {  innerPadding ->
+
+        CameraPreviewScreen(
+            viewmodel,
+            innerPadding,
+            scaffoldState,
+        )
+    }
+}
+
 
 @Composable
 fun CameraPreviewScreen(
