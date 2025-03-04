@@ -12,3 +12,4 @@ data class Photos(
     val photoPath : String? = null ,
     val videoPath : String? = null
 )
+

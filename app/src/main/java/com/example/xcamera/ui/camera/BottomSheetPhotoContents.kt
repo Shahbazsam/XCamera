@@ -3,6 +3,7 @@ package com.example.xcamera.ui.camera
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.ThumbnailUtils
+import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -39,9 +40,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.xcamera.VideoPlayer
+import com.example.xcamera.ui.mediaPlayer.PlayerViewModel
 import com.example.xcamera.ui.state.PhotoState
 import com.example.xcamera.ui.state.VideoState
 import java.io.File
@@ -114,7 +118,7 @@ fun BottomSheetPhotoContents(
             }
         } else {
             Log.d("BottomSheet", "Videos list size: ${videos.size}")
-            VideoStateList(navController,videos, modifier)
+            VideoStateList(navController, modifier)
         }
     }
 }
@@ -146,9 +150,10 @@ fun PhotosStateList(
 @Composable
 fun VideoStateList(
     navController: NavController,
-    videos : List<VideoState>,
     modifier: Modifier
 ) {
+    val viewModel = hiltViewModel<PlayerViewModel>()
+    val videoItems by viewModel.videoItemState.collectAsStateWithLifecycle()
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -156,28 +161,35 @@ fun VideoStateList(
         contentPadding = PaddingValues(16.dp),
         modifier = modifier
     ) {
-        items(videos) { video ->
+        items(videoItems) { video ->
             val context = LocalContext.current
-            val thumbnail = remember(video.videoPath) {
-               video.videoPath?.let { getVideoThumbnail(context , video.videoPath) }
-            }
+            Log.d("MetaData" , "${video.name}")
+            Log.d("MetaData" , "${video.contentUri}")
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable { video.videoPath?.let {
+                    .clickable {
                         navController.navigate(VideoPlayer(
-                            path = it
+                            path = video.contentUri.toString()
                         ))
-                    } } // Open player on click
+                    }
             ) {
-                thumbnail?.let {
-                    Image(
-                        bitmap = it.asImageBitmap(),
-                        contentDescription = "Video Thumbnail",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
+                Image(
+                    bitmap = video.bitmap.asImageBitmap(),
+                    contentDescription = "Video Thumbnail",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Text(
+
+                    text = video.name,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .size(14.dp)
+                        .padding(8.dp),
+                    color = Color.White
+
+                )
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play Video",
@@ -191,19 +203,5 @@ fun VideoStateList(
             }
         }
 
-            /*AsyncImage(
-                model = video.videoPath?.let { File(it) },
-                contentDescription = "Videos",
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )*/
     }
-}
-
-fun getVideoThumbnail(context: Context , videoPath : String) : Bitmap? {
-    return ThumbnailUtils.createVideoThumbnail(
-        videoPath,
-        MediaStore.Video.Thumbnails.MINI_KIND
-    )
 }

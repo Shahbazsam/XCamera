@@ -1,5 +1,6 @@
 package com.example.xcamera
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -27,7 +28,7 @@ fun AppNavigationManager(modifier: Modifier = Modifier) {
         composable<VideoPlayer> {
             val args = it.toRoute<VideoPlayer>()
             PlayerScreen(
-                videoPath = args.path
+                contentUri = args.path
             )
         }
     }

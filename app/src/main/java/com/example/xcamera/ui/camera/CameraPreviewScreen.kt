@@ -81,7 +81,6 @@ import java.util.UUID
 
 @Composable
 fun CameraScaffoldScreen(navController: NavController) {
-    Log.d("nav" , "nav after")
     val viewmodel : CameraViewModel = hiltViewModel()
     val photos by viewmodel.photoUiState.collectAsStateWithLifecycle()
     val videos by viewmodel.videoUiState.collectAsStateWithLifecycle()
