@@ -63,6 +63,9 @@ fun PlayerScreen(contentUri : String , viewModel: PlayerViewModel = hiltViewMode
                     it.onResume()
                     it.player?.play()
                 }
+                Lifecycle.Event.ON_DESTROY -> {
+                    it.player?.release()
+                }
                 else -> {}
             }
 

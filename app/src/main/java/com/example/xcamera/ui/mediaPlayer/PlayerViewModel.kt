@@ -70,11 +70,6 @@ class PlayerViewModel @Inject constructor(
 
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        player.release()
-    }
-
     private suspend fun getThumbnailAsync(videoPath: String): Bitmap {
         return withContext(Dispatchers.IO) {
             ThumbnailUtils.createVideoThumbnail(
