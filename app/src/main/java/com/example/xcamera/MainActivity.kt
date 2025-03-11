@@ -28,7 +28,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             XCameraTheme {
-                val viewModel = viewModel<CameraViewModel>()
                 AppNavigationManager()
             }
         }
