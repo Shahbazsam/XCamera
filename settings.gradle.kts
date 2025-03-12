@@ -21,4 +21,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "XCamera"
 include(":app")
- 
